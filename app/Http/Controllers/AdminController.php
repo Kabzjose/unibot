@@ -11,7 +11,7 @@ class AdminController extends Controller {
     // ---- Knowledge entries / FAQs ----
     public function entries(Request $r) {
         $q = KnowledgeEntry::with('category')->latest();
-        if ($s = $r->search) $q->where(fn($x) => $x->where('question', 'like', "%$s%")->orWhere('keywords', 'like', "%$s%")->orWhere('answer', 'like', "%$s%"));
+        if ($s = $r->search) $q->where(fn($x) => $x->where('question', 'ilike', "%$s%")->orWhere('keywords', 'ilike', "%$s%")->orWhere('answer', 'ilike', "%$s%"));
         if ($r->category_id) $q->where('category_id', $r->category_id);
         if ($r->filled('approved')) $q->where('is_approved', $r->approved);
         return $q->paginate(15);
@@ -83,7 +83,7 @@ class AdminController extends Controller {
             'top_categories' => KnowledgeEntry::join('categories', 'categories.id', '=', 'knowledge_entries.category_id')
                 ->selectRaw('categories.name, SUM(hits) as hits')->groupBy('categories.name')->orderByDesc('hits')->limit(8)->get(),
             'frequent' => ChatLog::selectRaw('MAX(question) as question, COUNT(*) as c')->groupBy('normalized')->orderByDesc('c')->limit(10)->get(),
-            'daily' => ChatLog::selectRaw('DATE(created_at) as d, SUM(answered) as a, COUNT(*) as t')->where('created_at', '>=', now()->subDays(14))->groupBy('d')->orderBy('d')->get(),
+            'daily' => ChatLog::selectRaw('DATE(created_at) as d, SUM(CASE WHEN answered THEN 1 ELSE 0 END) as a, COUNT(*) as t')->where('created_at', '>=', now()->subDays(14))->groupBy('d')->orderBy('d')->get(),
         ];
     }
 }

@@ -3,7 +3,7 @@ namespace App\Services;
 use App\Models\{KnowledgeEntry, Synonym};
 use Illuminate\Support\Facades\Cache;
 
-/** Pure-code matching: tokenise -> expand synonyms -> MySQL FULLTEXT/LIKE candidates -> programmed relevance score. */
+/** Pure-code matching: tokenise -> expand synonyms -> PostgreSQL full-text/ILIKE candidates -> programmed relevance score. */
 class ChatService {
     const STOP = ['the','a','an','is','are','what','how','do','does','i','to','for','of','and','in','on','can','my','me','about','please','tell','there','you','we','it','be','get','need','want'];
     const MIN_SCORE = 5.0;
@@ -37,11 +37,13 @@ class ChatService {
     protected function compute(string $question, array $tokens): array {
         $exp = $this->expand($tokens);
         $base = KnowledgeEntry::where('is_approved', true);
-        $cands = (clone $base)->whereRaw('MATCH(title,question,keywords) AGAINST (? IN BOOLEAN MODE)',
-            [implode(' ', array_map(fn($t) => $t . '*', $exp))])->limit(25)->get();
+        $cands = (clone $base)->whereRaw(
+            "to_tsvector('simple', title || ' ' || question || ' ' || coalesce(keywords,'')) @@ to_tsquery('simple', ?)",
+            [implode(' | ', array_map(fn($t) => $t . ':*', $exp))]
+        )->limit(25)->get();
         if ($cands->isEmpty()) {
             $cands = $base->where(function ($w) use ($exp) {
-                foreach ($exp as $t) $w->orWhere('keywords', 'like', "%$t%")->orWhere('question', 'like', "%$t%")->orWhere('title', 'like', "%$t%");
+                foreach ($exp as $t) $w->orWhere('keywords', 'ilike', "%$t%")->orWhere('question', 'ilike', "%$t%")->orWhere('title', 'ilike', "%$t%");
             })->limit(25)->get();
         }
         $best = null; $bestScore = 0; $lq = strtolower($question);
