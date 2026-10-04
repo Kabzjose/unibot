@@ -3,17 +3,18 @@ namespace App\Http\Controllers;
 use App\Models\{Category, ChatLog, Document, KnowledgeEntry, Synonym};
 use App\Services\ChatService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Cache, Storage};
+use Illuminate\Support\Facades\{Cache, DB, Storage};
 
 class AdminController extends Controller {
+    private function like() { return DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like'; }
     private function bust() { Cache::forever('kb_v', microtime(true)); Cache::forget('synonym_groups'); }
 
     // ---- Knowledge entries / FAQs ----
     public function entries(Request $r) {
         $q = KnowledgeEntry::with('category')->latest();
-        if ($s = $r->search) $q->where(fn($x) => $x->where('question', 'ilike', "%$s%")->orWhere('keywords', 'ilike', "%$s%")->orWhere('answer', 'ilike', "%$s%"));
+        if ($s = $r->search) $q->where(fn($x) => $x->where('question', $this->like(), "%$s%")->orWhere('keywords', $this->like(), "%$s%")->orWhere('answer', $this->like(), "%$s%"));
         if ($r->category_id) $q->where('category_id', $r->category_id);
-        if ($r->filled('approved')) $q->where('is_approved', $r->approved);
+        if ($r->filled('approved')) $q->where('is_approved', $r->boolean('approved'));
         return $q->paginate(15);
     }
     private function rules() {
@@ -71,8 +72,8 @@ class AdminController extends Controller {
     }
     public function logs(Request $r) {
         $q = ChatLog::latest();
-        if ($r->filled('answered')) $q->where('answered', $r->answered);
-        if ($s = $r->search) $q->where('question', 'like', "%$s%");
+        if ($r->filled('answered')) $q->where('answered', $r->boolean('answered'));
+        if ($s = $r->search) $q->where('question', $this->like(), "%$s%");
         return $q->paginate(20);
     }
     public function analytics() {

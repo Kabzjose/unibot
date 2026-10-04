@@ -1,7 +1,7 @@
 <?php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\{DB, Schema};
 
 return new class extends Migration {
     public function up(): void {
@@ -21,8 +21,11 @@ return new class extends Migration {
             $t->boolean('is_approved')->default(true)->index();
             $t->unsignedInteger('hits')->default(0)->index();
             $t->timestamps();
-            $t->fullText(['title', 'question', 'keywords']);
+            if (DB::getDriverName() !== 'pgsql') $t->fullText(['title', 'question', 'keywords']);
         });
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("CREATE INDEX knowledge_entries_fts ON knowledge_entries USING GIN (to_tsvector('simple', title || ' ' || question || ' ' || coalesce(keywords, '')))");
+        }
         Schema::create('synonyms', function (Blueprint $t) {
             $t->id(); $t->string('word')->unique(); $t->text('alternatives'); $t->timestamps();
         });

@@ -1,7 +1,9 @@
 <?php
 use App\Http\Controllers\{AdminController, AuthController, ChatController};
 use App\Http\Middleware\AdminOnly;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\{Route, URL};
+
+if (app()->environment('production')) URL::forceScheme('https');
 
 Route::view('/', 'chat');
 Route::post('/api/chat', [ChatController::class, 'ask'])->middleware('throttle:30,1');

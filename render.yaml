@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: unibot
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false          # paste output of: php artisan key:generate --show
+      - key: APP_URL
+        sync: false          # https://your-service.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false          # Neon connection string (postgresql://...?sslmode=require)
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr

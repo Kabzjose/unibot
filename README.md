@@ -15,3 +15,11 @@ Matching: tokenise -> stop-word removal -> synonym expansion -> MySQL FULLTEXT (
 (keyword, tag, phrase, similarity, popularity) -> best approved entry above threshold (ChatService::MIN_SCORE) or fallback.
 Uploaded PDFs become DRAFT entries; approve them before students can see them.
 Scanned (image-only) PDFs are not supported without OCR.
+
+## Deploy: Render (app) + Neon (PostgreSQL)
+The code now works on MySQL and PostgreSQL. Vercel is not used (no PHP runtime).
+1. Copy Dockerfile, .dockerignore, render.yaml and docker/ into the Laravel project root; push the project to GitHub.
+2. Neon: create a project, copy the connection string.
+3. Render: New > Blueprint (uses render.yaml). Set APP_KEY, APP_URL and DB_URL. Deploy.
+4. Import your approved data and create the admin user (see the chat instructions: kb.json export/import, then setval, then forceCreate).
+Do NOT run db:seed in production.
